@@ -29,6 +29,10 @@ resources:
       googleProjectId: my-google-project
       instanceId: my-instance-id
       zone: europe-west2-a
+      postActivateScripts:
+      - |
+        echo hello world &&\
+        echo machine public ip: $IP
     access:
       type: web
       url: http://access.my-instance.com/
@@ -124,25 +128,11 @@ Start for production
 gunicorn -b 0.0.0.0:5000 -w 2 resourcesaverproxy.web:app
 ```
 
-### REST API
-
-* `/activate?auth=&resource_id=&num_hours=`
-* `/get_status?auth=&resource_id=`
-* `/get_access?auth=&resource_id=`
-
-Response status_code indicates success or failure
-
-Response body is a json object with the following keys:
-
-* `ok` - boolean indicating success or failure
-* `error` - only returned in case of error, contains string with the error message
-* additional method specific keys might also be returned
-
-### WEB Interface
-
-* `/web?resource_id=`
+Access the web page for a resource at `/web?resource_id=`
 
 Show a form to request access, after it's submitted, user is redirected according to access config.
+
+Web page also shows reference for using the web API.
 
 ## Deactivation daemon
 

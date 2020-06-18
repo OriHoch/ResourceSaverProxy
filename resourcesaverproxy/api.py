@@ -5,6 +5,7 @@ import json
 import requests
 import datetime
 import time
+import traceback
 
 
 with open(os.environ["RSP_CONFIG"]) as f:
@@ -34,8 +35,9 @@ def _get_resource_auth(resource_config, auth):
 def _check_resource_access_status(acc):
     if acc["type"] == "web":
         try:
-            res = requests.get(acc["url"])
-        except requests.ConnectionError:
+            res = requests.get(acc["url"], timeout=15)
+        except Exception:
+            traceback.print_exc()
             return False
         status_code = res.status_code
         res.close()
@@ -81,11 +83,26 @@ def _set_droptime(resource_id, droptime):
         os.unlink(filename)
 
 
+def _runPostActivateResourceScripts(res, ip):
+    for script in res.get("postActivateScripts"):
+        subprocess.check_call(script, shell=True, env={**os.environ, "IP": ip})
+
+
 def _activate_resource(res):
     if res["type"] == "google-cloud-instance":
         status = json.loads(subprocess.check_output(["gcloud", "--project", res["googleProjectId"], "compute", "instances", "describe", res["instanceId"],"--format", "json", "--zone", res["zone"]]))
         if status["status"] != "RUNNING":
             subprocess.check_call(["gcloud", "--project", res["googleProjectId"], "compute", "instances", "start", res["instanceId"], "--zone", res["zone"]])
+            time.sleep(10)
+            status = json.loads(subprocess.check_output(["gcloud", "--project", res["googleProjectId"], "compute", "instances", "describe", res["instanceId"], "--format", "json", "--zone", res["zone"]]))
+        ip = ""
+        for networkInterface in status["networkInterfaces"]:
+            for accessConfig in networkInterface["accessConfigs"]:
+                if accessConfig["name"] == "External NAT":
+                    ip = accessConfig["natIP"]
+                    break
+            if ip: break
+        _runPostActivateResourceScripts(res, ip)
     else:
         raise Exception("invalid resource type %s" % res["type"])
 

@@ -30,6 +30,23 @@ def get_access():
         return {'ok': False, 'error': str(e)}, 500
 
 
+@app.route('/get_deactivation_time')
+def get_deactivation_time():
+    try:
+        return {'ok': True, 'deactivation_time': api.get_deactivation_time(**dict(request.args))}
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}, 500
+
+
+@app.route('/force_deactivate')
+def force_deactivate():
+    try:
+        api.force_deactivate(**dict(request.args))
+        return {'ok': True}
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}, 500
+
+
 @app.route('/web')
 def web():
     return render_template("web.html", resource_id=request.args["resource_id"])
